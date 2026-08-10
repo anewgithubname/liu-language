@@ -1,0 +1,341 @@
+/**
+ * @file cutil.cuh
+ * @brief Miscellaneous utility functions for Machine Learning
+ * @author Song Liu (song.liu@bristol.ac.uk)
+ *
+ * This file contains all essential matrix operations.
+ * Whatever you do, please keep it as simple as possible.
+ *
+    Copyright (C) 2023 Song Liu (song.liu@bristol.ac.uk)
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+ */
+
+#pragma once
+
+#include <cmath>        // std::sqrt (float overload) in the fused CPU Adam
+#include <type_traits>  // std::is_same_v guards of the fused Adam paths
+
+#include "../cpp/juzhen.hpp"
+
+#ifdef CUDA
+#include <thrust/device_vector.h>
+#include <thrust/sort.h>
+#endif
+
+#ifdef CUDA
+#define dvector thrust::device_vector
+#else
+#define dvector std::vector
+#endif
+
+template <class T>
+Matrix<T> comp_dist(const Matrix<T> &a, const Matrix<T> &b) {
+    return sum(square(a), 1) * Matrix<T>::ones(1, b.num_row()) +
+           Matrix<T>::ones(a.num_row(), 1) * sum(square(b), 1).T() -
+           2 * a * b.T();
+}
+
+template <class T>
+float comp_med(const Matrix<T> &a) {
+    STATIC_TIC;
+    size_t n = a.num_row() * a.num_row();
+#ifdef CUDA
+    const float *s = (float *)comp_dist(a, a).data();
+    thrust::device_vector<float> vec(s, s + n);
+    thrust::sort(vec.begin(), vec.end());
+    STATIC_TOC;
+    return sqrt(.5*vec[n / 2]);
+#else
+    float *s = (float *)comp_dist(a, a).data();
+    std::sort(s, s + n);
+    STATIC_TOC;
+    return sqrt(.5*s[n / 2]);
+#endif
+}
+
+template <class T>
+Matrix<T> kernel_gau(Matrix<T> &&b, float sigma) {
+    return exp(-b / (2 * sigma * sigma));
+}
+
+template <class T>
+Matrix<T> relu(Matrix<T> &&M) {
+    return elemwise([=] __GPU_CPU__(float x) { return x > 0.0 ? x : 0.0; }, M);
+}
+
+template <class T>
+Matrix<T> d_relu(Matrix<T> &&M) {
+    return elemwise([=] __GPU_CPU__(float x) { return x > 0.0 ? 1.0 : 0.0; }, M);
+}
+
+template <class T>
+Matrix<T> clamp(Matrix<T> &&M, float lo, float hi) {
+    return elemwise([=] __GPU_CPU__(float x) {
+        return x < lo ? lo : (x > hi ? hi : x);
+    }, M);
+}
+
+template <class T>
+Matrix<T> clamp(const Matrix<T> &M, float lo, float hi) {
+    return clamp(Matrix<T>(M), lo, hi);
+}
+
+template <class T>
+inline int argmin(std::vector<T> a) {
+    // replace all nan with inf
+    std::replace_if(a.begin(), a.end(), [](T x) { return std::isnan(x); },
+                    std::numeric_limits<T>::infinity());
+    return std::min_element(a.begin(), a.end()) - a.begin();
+}
+
+template <class T>
+inline int argmax(std::vector<T> a) {
+    // replace all nan with -inf
+    std::replace_if(a.begin(), a.end(), [](T x) { return std::isnan(x); },
+                    -std::numeric_limits<T>::infinity());
+    return std::max_element(a.begin(), a.end()) - a.begin();
+}
+
+template <class T>
+inline float item(const Matrix<T> &M){
+    // assert(M.num_row() == 1 && M.num_col() == 1);
+    #if !defined(CUDA) && !defined(APPLE_SILICON) && !defined(ROCM_HIP)
+        return M.elem(0, 0);
+    #else
+        if constexpr (std::is_same_v<T, float>) {
+            return M.elem(0, 0);
+        } else {
+            return M.to_host().elem(0, 0);
+        }
+    #endif
+}
+
+template <class T>
+struct adam_state{
+    int iteration;
+    float alpha, beta1, beta2, eps;
+    Matrix<T> m, v;
+    adam_state(const Matrix<T> &theta)
+        :iteration(1), alpha(0.01), beta1(0.9), beta2(0.999), eps(1e-8){
+        m = zeros_like(theta);
+        v = zeros_like(theta);
+    }
+    adam_state(double alpha, size_t nrow, size_t ncol)
+        :iteration(1), alpha(alpha), beta1(0.9), beta2(0.999), eps(1e-8){
+        m = Matrix<T>::zeros(nrow, ncol);
+        v = Matrix<T>::zeros(nrow, ncol);
+    }
+
+    void print_stats(){
+        std::cout << "iteration: " << iteration << " alpha: " << alpha << " beta1: " << beta1 << " beta2: " << beta2 << " eps: " << eps << std::endl << "m: " << m.norm() << std::endl << "v: " << v.norm() << std::endl;
+	}
+};
+
+#ifdef CUDA
+// Fused Adam step: one elementwise kernel replaces the ~12 matrix-op
+// kernels (and their temporaries) of the generic formulation below.
+// m, v and g are updated in place; bc1/bc2 are the host-side bias
+// corrections 1/(1-beta^t).
+__global__ void adam_update_kernel(float* g, float* m, float* v,
+                                   float alpha, float beta1, float beta2,
+                                   float eps, float bc1, float bc2, size_t n) {
+    size_t i = (size_t)blockIdx.x * blockDim.x + threadIdx.x;
+    if (i >= n) return;
+    const float gi = g[i];
+    const float mi = beta1 * m[i] + (1.0f - beta1) * gi;
+    const float vi = beta2 * v[i] + (1.0f - beta2) * gi * gi;
+    m[i] = mi;
+    v[i] = vi;
+    g[i] = alpha * (mi * bc1) / (sqrtf(vi * bc2) + eps);
+}
+#endif
+
+template <class T>
+Matrix<T> adam_update(Matrix<T> &&g, adam_state<T> &state){
+    int &iteration = state.iteration;
+    float &alpha = state.alpha, &beta1 = state.beta1, &beta2 = state.beta2, &eps = state.eps;
+    Matrix<T> &m = state.m, &v = state.v;
+
+#ifdef CUDA
+    // Callers hand over ownership of g (an rvalue), so its buffer can be
+    // rewritten in place with the update.
+    if constexpr (std::is_same_v<T, CUDAfloat>) {
+        if (!g.get_transpose()) {
+            const size_t n = g.num_row() * g.num_col();
+            const float bc1 = 1.0f / (1.0f - powf(beta1, (float)iteration));
+            const float bc2 = 1.0f / (1.0f - powf(beta2, (float)iteration));
+            const int threads = 256;
+            const int blocks = (int)((n + threads - 1) / threads);
+            adam_update_kernel<<<blocks, threads>>>(
+                const_cast<float*>(reinterpret_cast<const float*>(g.data())),
+                const_cast<float*>(reinterpret_cast<const float*>(m.data())),
+                const_cast<float*>(reinterpret_cast<const float*>(v.data())),
+                alpha, beta1, beta2, eps, bc1, bc2, n);
+            CudaErrorCheck(cudaGetLastError());
+            iteration++;
+            return std::move(g);
+        }
+    }
+#endif
+#ifdef APPLE_SILICON
+    // Fused Metal Adam step (elementwise, so layout is irrelevant beyond the
+    // transpose-flag guard); replaces ~12 matrix ops and their temporaries.
+    if constexpr (std::is_same_v<T, MPSfloat>) {
+        if (!g.get_transpose()) {
+            const size_t n = g.num_row() * g.num_col();
+            const float bc1 = 1.0f / (1.0f - powf(beta1, (float)iteration));
+            const float bc2 = 1.0f / (1.0f - powf(beta2, (float)iteration));
+            mpsAdamUpdate(
+                const_cast<float*>(reinterpret_cast<const float*>(g.data())),
+                const_cast<float*>(reinterpret_cast<const float*>(m.data())),
+                const_cast<float*>(reinterpret_cast<const float*>(v.data())),
+                alpha, beta1, beta2, eps, bc1, bc2, (int)n);
+            iteration++;
+            return std::move(g);
+        }
+    }
+#endif
+
+    // Fused CPU Adam step: the CUDA and Metal paths above replace the ~12
+    // matrix-op kernels (and their temporaries) of the generic formulation
+    // below with one elementwise pass; this is the same fusion for plain
+    // CPU floats. It replicates the generic path's float rounding EXACTLY,
+    // so results are bit-identical: scale() casts its double factor back
+    // to float and its add(0, s1) form appends "+ 0.0f"; the bias-corrected
+    // divisors go through double 1.0/x before the float cast (operator/'s
+    // scale(1.0/r)); the final division is eleminv's DOUBLE 1.0/x followed
+    // by a float hadmd multiply; sqrt is the float overload, as in the
+    // elemwise lambda of juzhen.hpp's sqrt(Matrix). Transposed operands
+    // fall through to the generic formulation, as in the CUDA guard.
+    if constexpr (std::is_same_v<T, float>) {
+        if (!g.get_transpose() && !m.get_transpose() && !v.get_transpose()) {
+            const float omb1 = 1 - beta1, omb2 = 1 - beta2;
+            const float r1 = (float)(1.0 / (1.0 - pow((double)beta1, (double)iteration)));
+            const float r2 = (float)(1.0 / (1.0 - pow((double)beta2, (double)iteration)));
+            float* gp = const_cast<float*>(g.data());
+            float* mp = const_cast<float*>(m.data());
+            float* vp = const_cast<float*>(v.data());
+            const size_t n = g.num_row() * g.num_col();
+            for (size_t i = 0; i < n; i++) {
+                const float gi = gp[i];
+                const float mi = (beta1 * mp[i] + 0.0f) + (omb1 * gi + 0.0f);
+                const float vi = (beta2 * vp[i] + 0.0f) + (omb2 * (gi * gi) + 0.0f);
+                mp[i] = mi; vp[i] = vi;
+                const float mh  = r1 * mi + 0.0f;
+                const float vh  = r2 * vi + 0.0f;
+                const float den = 1.0f * std::sqrt(vh) + eps;
+                gp[i] = (alpha * mh + 0.0f) * (float)(1.0 / den);
+            }
+            iteration++;
+            return std::move(g);
+        }
+    }
+
+    m = beta1 * m + (1 - beta1) * g;
+    v = beta2 * v + (1 - beta2) * square(g);
+
+    Matrix<T> m_hat = m / (1 - pow(beta1, iteration));
+    Matrix<T> v_hat = v / (1 - pow(beta2, iteration));
+
+    g = alpha * m_hat / (sqrt(v_hat) + eps);
+    iteration++;
+    return std::move(g);
+}
+
+template <class T>
+Matrix<T> predict_one_hot(const Matrix<T>& input){
+    //finding the maximum of input for each column
+    auto colmax = reduce(
+
+        [] __GPU_CPU__(float *v, float *vdes, int lenv, int lendes){
+            double max = - DBL_MAX;
+            for(int i = 0; i < lenv; i++){
+                if(v[i] > max){
+                    max = v[i];
+                }
+            }
+            vdes[0] = max;
+        },
+        
+        input, 0, 1);
+
+    //substraction of the maximum from each column
+    auto sub = input - Matrix<T>::ones(input.num_row(), 1) * colmax;
+    //converting it to zero one matrix
+    return elemwise([] __GPU_CPU__ (float x){return x > -1e-5 ? 1 : 0;}, std::move(sub));
+}
+
+#if defined(APPLE_SILICON)
+template <>
+Matrix<MPSfloat> predict_one_hot(const Matrix<MPSfloat>& input){
+    // use topk to find the maximum of input for each column
+    auto maximum = topk(input, 1, 0);
+    auto zero_one = Matrix<float>::zeros(input.num_row(), input.num_col());
+    for(int i = 0; i < input.num_col(); i++){
+        zero_one.elem((int) maximum.elem(0, i), i) = 1.0;
+    }
+    return Matrix<MPSfloat>(zero_one);
+}
+#endif
+
+// convert label Y matrix (1 X n) to one-hot encoding. 
+Matrix<float> one_hot(const Matrix<int>& Y, int k) {
+    Matrix<float> Y_one_hot("One_hot", k, Y.num_col());
+    Y_one_hot.zeros();
+
+    for (int i = 0; i < Y.num_col(); i++) {
+        Y_one_hot.elem(Y.elem(0, i), i) = 1.0;
+    }
+
+    return Y_one_hot;
+}
+
+std::vector<Matrix<float>> mnist_dataset(){
+    const int k = 10;
+    std::string base = PROJECT_DIR + std::string("/datasets/MNIST");
+
+    // check if *.matrix files exist
+    FILE *fp = fopen((base + "/train_x.matrix").c_str(), "r");
+    if (!fp) {
+        // unzip dataset.zip to the folder 
+        std::string command = "unzip " + base + "/dataset.zip -d " + base;
+        int result = system(command.c_str());
+        if (result != 0) {
+            ERROR_OUT;
+        }
+    }
+
+
+    auto X = read<float>(base + "/train_x.matrix"); 
+    // std::cout << "size of X: " << X.num_row() << " " << X.num_col() << std::endl;
+
+    auto labels = read<int>(base +"/train_y.matrix"); 
+    // std::cout << "size of labels: " << labels.num_row() << " " << labels.num_col() << std::endl;
+
+    auto Y = one_hot(labels, k);
+    // std::cout << "size of Y: " << Y.num_row() << " " << Y.num_col() << std::endl;
+
+    auto Xt = read<float>(base + "/test_x.matrix");
+    // std::cout << "size of Xt: " << Xt.num_row() << " " << Xt.num_col() << std::endl;
+
+    auto labels_t = read<int>(base + "/test_y.matrix"); 
+    // std::cout << "size of labels_t: " << labels_t.num_row() << " " << labels_t.num_col() << std::endl;
+
+    auto Yt = one_hot(labels_t, k);
+    // std::cout << "size of Yt: " << Yt.num_row() << " " << Yt.num_col() << std::endl;
+
+    return {X/255.0, Y, Xt/255.0, Yt};
+}

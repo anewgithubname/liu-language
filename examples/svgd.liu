@@ -1,0 +1,18 @@
+// SVGD: the Wasserstein gradient flow of reverse KL, in one unified
+// pipeline flow(field(descent(...))) (spec 10.2.1).
+seed 1
+
+target = 0.7*gaussian([-2, 0], 0.4) or 0.3*gaussian([2, 0], 0.4)
+
+// intent level: the via sugar
+Y = target ~ 300 via svgd(kernel=rbf, steps=400, lr=0.8)
+plot target ~ 1500, Y
+plot trajectory of Y
+
+// mechanism level: descent (an IVP) -> field -> flow, the same pipeline
+cloud = uniform([-3, -3], [3, 3]) ~ 300
+qt = descent(reverseKL(target), from=cloud, metric=stein)
+v  = field(qt, estimator=nw(kernel=rbf))
+Z  = flow(v, steps=400, lr=0.8) # cloud
+plot target ~ 1500, Z
+plot trajectory of Z

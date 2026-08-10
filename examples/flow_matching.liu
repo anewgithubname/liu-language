@@ -1,0 +1,14 @@
+// Flow matching via the legacy transport sugar (desugars to the
+// declared-path regression; see path_fm.liu for the explicit form).
+seed 42
+
+noise = gaussian([0, 0], 1)
+data  = moons(0.08) ~ 1000
+
+v = transport from noise to data using mlp(2 -> 64 -> 64 -> 2) for 8000 steps with lr=0.002
+T = flow(v, steps=50)
+
+plot data, (T # noise) ~ 1000            // T#mu_0 vs mu_1
+plot (flow(v, steps=1) # noise) ~ 1000   // one-step sampling vs 50 steps
+plot (inv(T) # data) ~ 1000, noise ~ 1000  // pullback: should match N(0, I)
+plot trajectory of (T # noise) ~ 300

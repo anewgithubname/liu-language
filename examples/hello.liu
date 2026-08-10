@@ -1,0 +1,26 @@
+// Hello, Liu! Measures are the nouns, '~' samples them, and one pipeline
+// -- flow( field( path ) ) # measure -- is the whole language.
+//
+// A program is one straight-line experiment: no loops, no branches, no
+// I/O; the program text plus its seed reproduces every output bit for
+// bit. Every program starts with a seed:
+seed 42
+
+// Distributions are built by constructors; '~ n' draws n points.
+noise = gaussian([0, 0], 1)
+data  = moons(0.08) ~ 1000            // a toy dataset (an empirical measure)
+plot data, noise ~ 500                // comma = several series, one figure
+
+// Flow matching in four lines. Write the interpolation as a formula in
+// the reserved time symbol t -- the formula IS the model:
+xt = t*data + (1-t)*noise             // a process from noise to data
+pt = prob(xt)                         // its law: a path of measures
+v  = field(pt, estimator=regress(mlp(2 -> 64 -> 64 -> 2)), steps=3500, lr=0.002)
+                                      // regress E[dx/dt | x_t]: the loss streams live
+T  = flow(v, steps=40)                // integrate the field into a Map
+
+plot data, (T # noise) ~ 800          // pushforward: generated samples vs data
+plot trajectory of (T # noise) ~ 300  // the same transport, as an animation
+
+// Try next (examples menu): "Diffusion" changes one line of coefficients;
+// "SVGD" runs the same pipeline with no training at all.

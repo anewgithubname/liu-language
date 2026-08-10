@@ -1,0 +1,16 @@
+// Diffusion as a declared path: change one line of coefficients and
+// flow matching becomes diffusion (VP schedule). Written in the
+// generative direction (t=0 pure noise, t=1 data), so no reverse needed.
+seed 7
+
+e    = gaussian([0, 0], 1)
+data = moons(0.08) ~ 2000
+
+xt = sqrt(1 - t*t)*e + t*data
+pt = prob(xt)
+v  = field(pt, estimator=regress(mlp(2 -> 96 -> 96 -> 2)), steps=8000, lr=0.002)
+T  = flow(v, steps=60)
+
+plot data, (T # e) ~ 800
+plot trajectory of (T # e) ~ 300
+plot (inv(T) # data) ~ 800, e ~ 800   // probability-flow ODE is a genuine Map: encoder for free
