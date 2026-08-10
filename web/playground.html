@@ -1,0 +1,686 @@
+<title>Liu (流) · Playground</title>
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#F2F4F6; --panel:#FFFFFF; --panel2:#E9EDF0; --ink:#1B2733; --mut:#5D6B78;
+  --line:#D5DCE2; --acc:#177E96; --sand:#B07E35; --err:#B4483A; --errbg:#FBEFEC;
+  --s0:#B07E35; --s1:#177E96; --s2:#7A6FC0; --grid:#00000014; --chipbg:#E9EDF0; --sel:#177E9648;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#101820; --panel:#16212B; --panel2:#1D2A36; --ink:#E7EDF2; --mut:#8FA0AE;
+  --line:#243342; --acc:#4FC3D9; --sand:#D9A96C; --err:#E08070; --errbg:#2A1D1B;
+  --s0:#D9A96C; --s1:#4FC3D9; --s2:#9A8CE8; --grid:#FFFFFF12; --chipbg:#1D2A36; --sel:#4FC3D958;
+}}
+:root[data-theme="dark"]{
+  --bg:#101820; --panel:#16212B; --panel2:#1D2A36; --ink:#E7EDF2; --mut:#8FA0AE;
+  --line:#243342; --acc:#4FC3D9; --sand:#D9A96C; --err:#E08070; --errbg:#2A1D1B;
+  --s0:#D9A96C; --s1:#4FC3D9; --s2:#9A8CE8; --grid:#FFFFFF12; --chipbg:#1D2A36; --sel:#4FC3D958;
+}
+:root[data-theme="light"]{
+  --bg:#F2F4F6; --panel:#FFFFFF; --panel2:#E9EDF0; --ink:#1B2733; --mut:#5D6B78;
+  --line:#D5DCE2; --acc:#177E96; --sand:#B07E35; --err:#B4483A; --errbg:#FBEFEC;
+  --s0:#B07E35; --s1:#177E96; --s2:#7A6FC0; --grid:#00000014; --chipbg:#E9EDF0; --sel:#177E9648;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);margin:0;
+  font-family:-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  line-height:1.65}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 24px 64px}
+header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.mark{font-size:44px;font-weight:700;letter-spacing:.02em}
+.mark small{font-size:17px;color:var(--acc);font-weight:600;margin-left:6px}
+.sub{color:var(--mut);font-size:14.5px;max-width:64ch}
+.sub code{color:var(--acc);font-family:ui-monospace,"JetBrains Mono","Cascadia Code","Cascadia Mono","Fira Code","SF Mono",Menlo,Consolas,"Ubuntu Mono","Liberation Mono","DejaVu Sans Mono",monospace;font-size:13px}
+.note{color:var(--mut);font-size:12.5px;margin:.35em 0 0;letter-spacing:.02em}
+.tabs{display:flex;gap:6px;margin:22px 0 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{appearance:none;border:0;background:none;color:var(--mut);font:inherit;font-size:14.5px;
+  padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;letter-spacing:.02em}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--acc);font-weight:600}
+.tabs button:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:4px}
+.panel{padding-top:18px}
+.thesis{color:var(--mut);font-size:14px;max-width:78ch;margin:0 0 16px}
+.cols{display:grid;grid-template-columns:minmax(460px,2fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+.left{position:sticky;top:16px;display:flex;flex-direction:column;gap:14px}
+@media (max-width:900px){.left{position:static}}
+.codebox{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.boxlab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);
+  padding:8px 14px;border-bottom:1px solid var(--line);background:var(--panel2)}
+pre{margin:0;padding:13px 16px;overflow-x:auto;font-family:ui-monospace,"JetBrains Mono","Cascadia Code","Cascadia Mono","Fira Code","SF Mono",Menlo,Consolas,"Ubuntu Mono","Liberation Mono","DejaVu Sans Mono",monospace;
+  font-size:12.6px;line-height:1.72;font-variant-numeric:tabular-nums}
+.kw{color:var(--acc);font-weight:600}.nm{color:var(--sand)}.cm{color:var(--mut);font-style:italic}
+.console pre{color:var(--mut);font-size:12px}
+.right{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;margin:0;padding:14px 16px 12px;min-width:0}
+.card figcaption{font-size:13.5px;font-weight:600;margin-bottom:10px;overflow-wrap:anywhere}
+canvas{width:100%;aspect-ratio:4/3;height:auto;display:block;background:var(--panel2);border-radius:6px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--mut);
+  background:var(--chipbg);border-radius:99px;padding:2px 10px;
+  max-width:100%;min-width:0;overflow-wrap:anywhere}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.dot.s0{background:var(--s0)}.dot.s1{background:var(--s1)}.dot.s2{background:var(--s2)}
+.tctl{display:flex;align-items:center;gap:12px;margin-top:10px}
+.play{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--ink);
+  width:34px;height:30px;border-radius:6px;cursor:pointer;font-size:13px}
+.play:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.tctl input[type=range]{flex:1;accent-color:var(--acc)}
+.tlab{font-family:ui-monospace,"JetBrains Mono","Cascadia Code","Cascadia Mono","Fira Code","SF Mono",Menlo,Consolas,"Ubuntu Mono","Liberation Mono","DejaVu Sans Mono",monospace;font-size:12px;color:var(--mut);min-width:74px;text-align:right}
+.errgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:16px}
+@media (max-width:520px){.errgrid{grid-template-columns:1fr}}
+.errcard .why{font-weight:400;color:var(--mut);font-size:12.5px;margin-left:6px}
+.ecode{background:var(--panel2);border-radius:6px;margin-bottom:10px}
+.emsg{background:var(--errbg);border-radius:6px;color:var(--err);white-space:pre-wrap;word-break:break-word}
+footer{margin-top:44px;color:var(--mut);font-size:12.5px;border-top:1px solid var(--line);padding-top:14px}
+footer code{font-family:ui-monospace,"JetBrains Mono","Cascadia Code","Cascadia Mono","Fira Code","SF Mono",Menlo,Consolas,"Ubuntu Mono","Liberation Mono","DejaVu Sans Mono",monospace;font-size:11.5px}
+</style>
+<style>
+.editorwrap{position:relative;background:var(--panel2);display:flex}
+.gutter{flex:0 0 auto;min-width:46px;box-sizing:border-box;margin:0;padding:13px 10px 13px 0;
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Code","Cascadia Mono","Fira Code","SF Mono",Menlo,Consolas,"Ubuntu Mono","Liberation Mono","DejaVu Sans Mono",monospace;
+  font-size:14px;line-height:25px;white-space:pre;text-align:right;
+  color:var(--mut);opacity:.65;border-right:1px solid var(--line);
+  overflow:hidden;user-select:none}
+/* single-layer editor: the highlighted <pre> itself is contenteditable, so
+   the caret and the glyphs come from the same boxes and cannot drift apart.
+   (The previous transparent-textarea-over-<pre> overlay was defeated on
+   Windows by browsers resolving different monospace faces for form controls
+   vs regular elements — a ~9% advance-width gap no CSS can bridge.) */
+.editor{margin:0;flex:1 1 auto;min-width:0;min-height:460px;box-sizing:border-box;padding:13px 16px;
+  font-family:ui-monospace,"JetBrains Mono","Cascadia Code","Cascadia Mono","Fira Code","SF Mono",Menlo,Consolas,"Ubuntu Mono","Liberation Mono","DejaVu Sans Mono",monospace;
+  font-size:14px;line-height:25px;
+  /* ligatures/contextual alternates (Cascadia!) would form and break across
+     highlight-span boundaries as you type — keep shaping stable */
+  font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0;tab-size:4;
+  white-space:pre;border:0;position:relative;display:block;overflow:auto;resize:vertical;
+  background:transparent;color:var(--ink);caret-color:var(--ink)}
+.editor:focus{outline:2px solid var(--acc);outline-offset:-2px}
+.editor::selection{background:var(--sel)}
+.errstripe{position:absolute;left:0;right:0;pointer-events:none;background:rgba(224,82,82,.14)}
+.focusstripe{position:absolute;left:0;right:0;pointer-events:none;background:rgba(79,195,217,.13)}
+figure.card.linked{cursor:pointer}
+.legend .chip[data-line]{cursor:pointer}
+.runbar{display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);background:var(--panel)}
+.runbtn{appearance:none;border:0;background:var(--acc);color:var(--bg);font:inherit;font-weight:700;
+  padding:7px 22px;border-radius:6px;cursor:pointer;letter-spacing:.03em}
+.runbtn:disabled{opacity:.45;cursor:default}
+.runbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;
+  font:inherit;font-size:13px;padding:6px 8px;max-width:280px}
+.status{font-size:12.5px;color:var(--mut);margin-left:auto;font-variant-numeric:tabular-nums}
+.boxlab{display:flex;align-items:center;gap:8px}
+.err{color:var(--err)}
+.conRow{display:flex;align-items:center;gap:10px;padding:13px 14px}
+.conMsg{color:var(--mut);font-size:12.5px}
+@keyframes wavemove{
+  0%{transform:translateX(-3px) translateY(0) rotate(-6deg)}
+  25%{transform:translateX(0) translateY(-3px) rotate(0deg)}
+  50%{transform:translateX(3px) translateY(0) rotate(6deg)}
+  75%{transform:translateX(0) translateY(3px) rotate(0deg)}
+  100%{transform:translateX(-3px) translateY(0) rotate(-6deg)}
+}
+.conWave{display:inline-block;font-size:16px;animation:wavemove 1.4s ease-in-out infinite}
+.conWave[hidden]{display:none}
+.expandbtn{appearance:none;border:1px solid var(--line);background:var(--panel);color:var(--mut);
+  font:inherit;font-size:11.5px;letter-spacing:.02em;text-transform:none;padding:5px 12px;
+  border-radius:6px;cursor:pointer;white-space:nowrap}
+.expandbtn:hover{color:var(--ink);border-color:var(--acc)}
+.expandbtn:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.expandbtn.haserr{color:var(--err);border-color:var(--err)}
+#conPre{margin:0;max-height:112px;overflow-y:auto;color:var(--mut);font-size:12px;line-height:1.6;
+  padding:11px 14px;font-family:ui-monospace,"JetBrains Mono","Cascadia Code","Cascadia Mono","Fira Code","SF Mono",Menlo,Consolas,"Ubuntu Mono","Liberation Mono","DejaVu Sans Mono",monospace;
+  font-variant-ligatures:none}
+dialog#conModal,dialog#exModal{position:fixed;margin:auto;border:1px solid var(--line);border-radius:10px;padding:0;
+  background:var(--panel);color:var(--ink);width:min(880px,92vw);height:min(74vh,720px);
+  box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog#conModal[open],dialog#exModal[open]{display:flex;flex-direction:column}
+dialog#conModal::backdrop,dialog#exModal::backdrop{background:rgba(0,0,0,.45)}
+dialog#exModal{width:min(760px,92vw);height:auto;max-height:min(80vh,760px)}
+.exbtn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;
+  font:inherit;font-size:13px;padding:6px 12px;cursor:pointer;text-transform:none;letter-spacing:0;max-width:340px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exbtn:hover{border-color:var(--acc)}
+.exgroups{overflow:auto;padding:4px 4px 14px}
+.exgroup{padding:6px 14px 0}
+.exgroup h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);
+  margin:12px 0 4px;font-weight:600}
+.exitem{display:flex;gap:12px;align-items:baseline;padding:7px 10px;border-radius:6px;cursor:pointer}
+.exitem:hover{background:var(--panel2)}
+.exitem .nm2{color:var(--ink);font-weight:600;font-size:13.5px;white-space:nowrap}
+.exitem .ds{color:var(--mut);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.modalhead{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;
+  border-bottom:1px solid var(--line);background:var(--panel2);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--mut);border-radius:10px 10px 0 0;flex:none}
+.modalclose{appearance:none;border:0;background:none;color:var(--mut);font-size:15px;cursor:pointer;
+  width:26px;height:26px;border-radius:6px;line-height:1}
+.modalclose:hover{color:var(--ink);background:var(--panel)}
+.conslot--full{flex:1;min-height:0;display:flex}
+.conslot--full #conPre{flex:1;max-height:none;font-size:13.5px;color:var(--ink);padding:16px 18px}
+#losscv{aspect-ratio:auto;height:150px}
+#plots:empty::after{content:"Plots appear here after a run.";color:var(--mut);font-size:13px}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="mark">流<small>Liu</small></div>
+  <div>
+    <div class="sub">Playground — edit a program, run it on the live interpreter, watch the loss stream and the measures move. One pipeline: <code>flow(field(path)) # μ</code>.</div>
+    <div class="note">The language is the sandbox: no I/O primitives, not Turing complete. Identical program text + seed reproduces the output bit for bit (repeated runs are served from cache).</div>
+  </div>
+</header>
+
+<div class="cols" style="margin-top:20px">
+<div class="left">
+  <div class="codebox">
+    <div class="boxlab">program · <button class="exbtn" id="exbtn" type="button" aria-haspopup="dialog">examples ▾</button></div>
+    <div class="editorwrap"><div class="gutter" id="gutter" aria-hidden="true"></div><pre class="editor" id="ed" contenteditable="plaintext-only" spellcheck="false" role="textbox" aria-multiline="true"></pre></div>
+    <div class="runbar">
+      <button class="runbtn" id="run">Run</button>
+      <span class="status" id="status">ready</span>
+    </div>
+  </div>
+  <div class="codebox consolebox">
+    <div class="boxlab">interpreter output</div>
+    <div class="conRow" id="conRow">
+      <span class="conWave" id="conWave" hidden>🌊</span>
+      <span class="conMsg" id="conMsg">not run yet</span>
+      <button class="expandbtn" id="conExpand" type="button" hidden>show interpreter output</button>
+    </div>
+    <div id="conSlotCompact" hidden><pre id="conPre"><code id="con"></code></pre></div>
+  </div>
+  <figure class="card"><figcaption>training loss (live)</figcaption><canvas id="losscv"></canvas><div class="legend" id="losslegend"></div></figure>
+</div>
+<div class="right" id="plots"></div>
+</div>
+
+<dialog id="conModal">
+  <div class="modalhead"><span>interpreter output — full</span><button class="modalclose" id="conClose" type="button" aria-label="Close">✕</button></div>
+  <div class="conslot--full" id="conSlotFull"></div>
+</dialog>
+
+<dialog id="exModal">
+  <div class="modalhead"><span>examples — <code>examples/*.liu</code></span><button class="modalclose" id="exClose" type="button" aria-label="Close">✕</button></div>
+  <div class="exgroups" id="exGroups"></div>
+</dialog>
+
+<footer>Liu (流) v0.3+ prototype · backend: Juzhen (C++/BLAS) · reference: <code>docs/liu-reference.md</code> · server: <code>web/server.py</code> (stdlib, streaming NDJSON) · <span id="edver">editor v3 · single-layer</span></footer>
+</div>
+
+<script>
+const EXAMPLES = {"Hello, Liu": "// Hello, Liu! Measures are the nouns, '~' samples them, and one pipeline\n// -- flow( field( path ) ) # measure -- is the whole language.\n//\n// A program is one straight-line experiment: no loops, no branches, no\n// I/O; the program text plus its seed reproduces every output bit for\n// bit. Every program starts with a seed:\nseed 42\n\n// Distributions are built by constructors; '~ n' draws n points.\nnoise = gaussian([0, 0], 1)\ndata  = moons(0.08) ~ 1000            // a toy dataset (an empirical measure)\nplot data, noise ~ 500                // comma = several series, one figure\n\n// Flow matching in four lines. Write the interpolation as a formula in\n// the reserved time symbol t -- the formula IS the model:\nxt = t*data + (1-t)*noise             // a process from noise to data\npt = prob(xt)                         // its law: a path of measures\nv  = field(pt, estimator=regress(mlp(2 -> 64 -> 64 -> 2)), steps=3500, lr=0.002)\n                                      // regress E[dx/dt | x_t]: the loss streams live\nT  = flow(v, steps=40)                // integrate the field into a Map\n\nplot data, (T # noise) ~ 800          // pushforward: generated samples vs data\nplot trajectory of (T # noise) ~ 300  // the same transport, as an animation\n\n// Try next (examples menu): \"Diffusion\" changes one line of coefficients;\n// \"SVGD\" runs the same pipeline with no training at all.\n", "SVGD (fast, no training)": "// SVGD: the Wasserstein gradient flow of reverse KL, in one unified\n// pipeline flow(field(descent(...))) (spec 10.2.1).\nseed 1\n\ntarget = 0.7*gaussian([-2, 0], 0.4) or 0.3*gaussian([2, 0], 0.4)\n\n// intent level: the via sugar\nY = target ~ 300 via svgd(kernel=rbf, steps=400, lr=0.8)\nplot target ~ 1500, Y\nplot trajectory of Y\n\n// mechanism level: descent (an IVP) -> field -> flow, the same pipeline\ncloud = uniform([-3, -3], [3, 3]) ~ 300\nqt = descent(reverseKL(target), from=cloud)\nv  = field(qt, estimator=nw(kernel=rbf))\nZ  = flow(v, steps=400, lr=0.8) # cloud\nplot target ~ 1500, Z\nplot trajectory of Z", "Bayesian banana (unnormalized)": "// Unnormalized targets: score = grad L, the partition function cancels\n// under the log-gradient -- the reason SVGD serves Bayesian inference.\n// Capability flags: has a score, admits no exact sampler (~ requires via).\nseed 3\n\n// banana-shaped posterior (curved ridge)\nbanana = unnormalized( -x1*x1/8 - (x2 - x1*x1/4 + 1)*(x2 - x1*x1/4 + 1)/0.4 )\nY = banana ~ 400 via svgd(kernel=rbf, steps=600, lr=0.3)\nplot Y\nplot trajectory of Y\n\n// double well (bimodal posterior): modes at x1 = +-sqrt(2)\nwell = unnormalized( -(x1*x1 - 2)*(x1*x1 - 2)/0.5 - x2*x2 )\nZ = well ~ 400 via svgd(kernel=rbf, steps=600, lr=0.3)\nplot Z", "Flow matching (declared path)": "// Flow matching as a declared probability path (spec 10.2):\n// the interpolation formula is written in the program itself.\nseed 42\n\nnoise = gaussian([0, 0], 1)\ndata  = moons(0.08) ~ 1000\n\nxt = t*data + (1-t)*noise        // each endpoint occurs once: auto-lifted to independent RVs\npt = prob(xt)                     // the law of the process: a probability path\nv  = field(pt, estimator=regress(mlp(2 -> 64 -> 64 -> 2)), steps=8000, lr=0.002)\nT  = flow(v, steps=50)            // flow(field(prob(xt)))\n\nplot data, (T # noise) ~ 1000\nplot (inv(T) # data) ~ 1000, noise ~ 1000   // pullback: should match N(0, I)\nplot trajectory of (T # noise) ~ 300", "Diffusion (one line away from FM)": "// Diffusion as a declared path: change one line of coefficients and\n// flow matching becomes diffusion (VP schedule). Written in the\n// generative direction (t=0 pure noise, t=1 data), so no reverse needed.\nseed 7\n\ne    = gaussian([0, 0], 1)\ndata = moons(0.08) ~ 2000\n\nxt = sqrt(1 - t*t)*e + t*data\npt = prob(xt)\nv  = field(pt, estimator=regress(mlp(2 -> 96 -> 96 -> 2)), steps=8000, lr=0.002)\nT  = flow(v, steps=60)\n\nplot data, (T # e) ~ 800\nplot trajectory of (T # e) ~ 300\nplot (inv(T) # data) ~ 800, e ~ 800   // probability-flow ODE is a genuine Map: encoder for free", "Guidance (CFG, field algebra)": "// Classifier-free guidance (spec 10.3.1): Fields form a vector space,\n// and guidance is an affine extrapolation in it.\n//\n// \"Data\" has two classes -- the two modes of a mixture; we guide sampling\n// toward class y (the right mode).  w=0: unconditional.  w=1: exactly the\n// conditional field.  w>1: CFG -- sharper, mode-seeking; the combined field\n// is SYNTHETIC (it solves the continuity equation of no declared path, and\n// what its flow samples is an open question -- the language claims nothing).\nseed 7\n\nnoise = gaussian([0, 0], 1)\np_all = 0.7*gaussian([-2, 0], 0.4) or 0.3*gaussian([2, 0], 0.4)\np_y   = gaussian([2, 0], 0.4)\n\n// unconditional and conditional paths: same schedule, same noise endpoint\nxt_u = t*(p_all ~ 2000) + (1-t)*noise\nxt_c = t*(p_y ~ 1000) + (1-t)*noise\nv_u  = field(prob(xt_u), estimator=regress(mlp(2 -> 64 -> 64 -> 2)), steps=4000, lr=0.002)\nv_c  = field(prob(xt_c), estimator=regress(mlp(2 -> 64 -> 64 -> 2)), steps=4000, lr=0.002)\n\n// guidance = affine extrapolation in field algebra (coefficients sum to 1)\nv = v_u + 3*(v_c - v_u)\n\nT = flow(v, steps=60)\nplot p_all ~ 1500, (T # noise) ~ 800    // guided: right mode only, over-sharpened\nplot p_y ~ 800, (T # noise) ~ 800       // vs the true conditional: CFG concentrates harder\nplot trajectory of (T # noise) ~ 300", "SVGD inversion (record=true)": "// Smoothed SVGD is invertible: with record=true the per-step ensembles\n// are stored, the NW field becomes evaluable at arbitrary points, and\n// inversion solves the fixed point y = x + lr*Phi_t(x) step by step.\n// The inverse is bought with memory (and conditioned by dissipation).\nseed 1\n\ntarget = 0.7*gaussian([-2, 0], 0.4) or 0.3*gaussian([2, 0], 0.4)\ncloud  = uniform([-3, -3], [3, 3]) ~ 300\n\nv = field(descent(reverseKL(target), from=cloud), estimator=nw(kernel=rbf))\nT = flow(v, steps=150, lr=0.5, record=true)\n\nZ    = T # cloud                 // forward: simulate and record\nback = inv(T) # Z                // inverse: replay the recorded pointwise fields\nplot cloud, back                 // initial cloud vs its reconstruction: should coincide\nplot target ~ 1500, Z", "Error: provenance mismatch": "seed 0\ntarget = gaussian([0, 0], 1)\ncloud  = uniform([-2, -2], [2, 2]) ~ 50\nwrong  = spiral(2, 0.1) ~ 50\nv = field(descent(reverseKL(target), from=cloud), estimator=nw(kernel=rbf))\nZ = flow(v, steps=10) # wrong", "Error: no draw identity": "seed 0\ndata = moons(0.1) ~ 500\nxt = t*data + (1-t)*data\npt = prob(xt)"};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const SER = ['--s0','--s1','--s2'];
+
+function bounds(pts){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for(const [x,y] of pts){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  const px=(x1-x0)*.06+1e-3, py=(y1-y0)*.06+1e-3;
+  return [x0-px,x1+px,y0-py,y1+py];}
+function setup(cv){const r=window.devicePixelRatio||1;const w=cv.clientWidth||600,h=cv.clientHeight||340;
+  cv.width=Math.round(w*r);cv.height=Math.round(h*r);
+  const g=cv.getContext('2d');g.setTransform(r,0,0,r,0,0);g.clearRect(0,0,w,h);return [g,w,h];}
+function grid(g,w,h){g.strokeStyle=css('--grid')||'rgba(128,128,128,.15)';g.lineWidth=1;
+  for(let i=1;i<6;i++){const x=w*i/6;g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}
+  for(let i=1;i<5;i++){const y=h*i/5;g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}}
+
+// 3-D scatters: the interpreter dumps [x,y,z] triples for exactly-3-row
+// datasets; orthographic projection at view (az, el), drag to rotate.
+// Depth-cued alpha (nearer = brighter) so a 2-D manifold reads as a surface.
+const AZ0=0.7, EL0=0.5;
+const has3d=series=>series.some(s=>s.pts.length&&s.pts[0].length>2);
+function proj3(p, az, el){
+  const ca=Math.cos(az), sa=Math.sin(az), ce=Math.cos(el), se=Math.sin(el);
+  return [-sa*p[0]+ca*p[1], -se*ca*p[0]-se*sa*p[1]+ce*p[2],
+          ce*ca*p[0]+ce*sa*p[1]+se*p[2]];          // [screen x, screen y, depth]
+}
+function scatterInto(cv, series, view){
+  if(has3d(series)){
+    const az=view?view.az:AZ0, el=view?view.el:EL0;
+    const P=series.map(s=>s.pts.map(p=>p.length>2?proj3(p,az,el):[p[0],p[1],0]));
+    let d0=1e9,d1=-1e9;for(const s of P)for(const q of s){if(q[2]<d0)d0=q[2];if(q[2]>d1)d1=q[2];}
+    const [g,w,h]=setup(cv);grid(g,w,h);
+    const all=P.flat();const [x0,x1,y0,y1]=bounds(all);
+    const s0=Math.min(w/(x1-x0),h/(y1-y0)),mx=(x0+x1)/2,my=(y0+y1)/2;
+    P.forEach((s,k)=>{g.fillStyle=css(SER[k%3])||'#888';
+      for(const [x,y,d] of s){const cx=w/2+(x-mx)*s0, cy=h/2-(y-my)*s0;
+        g.globalAlpha=.30+.55*(d-d0)/(d1-d0+1e-9);
+        g.beginPath();g.arc(cx,cy,2.2,0,6.284);g.fill();}});
+    g.globalAlpha=1;return;}
+  const [g,w,h]=setup(cv);grid(g,w,h);
+  const all=series.flatMap(s=>s.pts);const [x0,x1,y0,y1]=bounds(all);
+  const s0=Math.min(w/(x1-x0),h/(y1-y0)),mx=(x0+x1)/2,my=(y0+y1)/2;
+  series.forEach((s,k)=>{g.fillStyle=css(SER[k%3])||'#888';g.globalAlpha=.82;
+    for(const [x,y] of s.pts){const cx=w/2+(x-mx)*s0, cy=h/2-(y-my)*s0;
+      g.beginPath();g.arc(cx,cy,2.2,0,6.284);g.fill();}});
+  g.globalAlpha=1;}
+
+function signalInto(cv, series){        // plot_signal: values over sample index, one polyline per row
+  const [g,w,h]=setup(cv);grid(g,w,h);
+  let y0=1e9,y1=-1e9,nmax=1;
+  for(const s of series){for(const v of s.values){if(v<y0)y0=v;if(v>y1)y1=v;}
+    nmax=Math.max(nmax,s.n||s.values.length);}
+  const py=(y1-y0)*.06+1e-3;y0-=py;y1+=py;
+  series.forEach((s,k)=>{g.strokeStyle=css(SER[k%3])||'#888';g.lineWidth=1.5;g.globalAlpha=.9;
+    g.beginPath();
+    const st=s.stride||1,n=Math.max(2,s.n||s.values.length);
+    s.values.forEach((v,j)=>{
+      const x=(j*st)/(n-1)*w, y=h-(v-y0)/(y1-y0)*h;
+      j?g.lineTo(x,y):g.moveTo(x,y);});
+    g.stroke();});
+  g.globalAlpha=1;}
+
+function trajInto(cv, frames, tf){
+  const [g,w,h]=setup(cv);grid(g,w,h);
+  const F=frames.length;const all=frames.flat();const [x0,x1,y0,y1]=bounds(all);
+  const f=Math.min(tf*(F-1),F-1-1e-6), i=Math.floor(f), a=f-i;
+  const A=frames[i], B=frames[Math.min(i+1,F-1)];
+  const s0=Math.min(w/(x1-x0),h/(y1-y0)),mx=(x0+x1)/2,my=(y0+y1)/2;
+  g.fillStyle=css('--s1')||'#4FC3D9';g.globalAlpha=.85;
+  for(let k=0;k<A.length;k++){const x=A[k][0]*(1-a)+B[k][0]*a, y=A[k][1]*(1-a)+B[k][1]*a;
+    const cx=w/2+(x-mx)*s0, cy=h/2-(y-my)*s0;
+    g.beginPath();g.arc(cx,cy,2.2,0,6.284);g.fill();}
+  g.globalAlpha=1;}
+
+let plotN=0;
+let liveTrajStops=[];
+function addPlot(p){
+  const box=document.getElementById('plots');
+  const fig=document.createElement('figure');fig.className='card';
+  const id='pl'+(plotN++);
+  const site=(p.line?' · line '+p.line:'')+((p.iter&&p.iter.length)?' · k='+p.iter.join('.'):'');
+  if(p.line){fig.classList.add('linked');fig.title='click to highlight line '+p.line+' in the editor';
+    fig.addEventListener('click',()=>focusLine(p.line));}
+  if(p.type==='scatter'){
+    const legend=p.series.map((s,k)=>chip(s.label,k)).join('');
+    const d3=has3d(p.series);
+    fig.innerHTML='<figcaption>plot'+site+(d3?' · 3d — drag to rotate':'')+'</figcaption><canvas id="'+id+'"></canvas><div class="legend">'+legend+'</div>';
+    box.appendChild(fig);
+    const cv=document.getElementById(id);
+    scatterInto(cv, p.series);
+    if(d3){
+      const view={az:AZ0, el:EL0};let drag=null;
+      cv.style.cursor='grab';cv.style.touchAction='none';
+      cv.addEventListener('pointerdown',e=>{drag=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);e.preventDefault();});
+      cv.addEventListener('pointermove',e=>{if(!drag)return;
+        view.az+=(e.clientX-drag[0])*0.01;
+        view.el=Math.max(-1.55,Math.min(1.55,view.el+(e.clientY-drag[1])*0.01));
+        drag=[e.clientX,e.clientY];scatterInto(cv,p.series,view);});
+      cv.addEventListener('pointerup',()=>{drag=null;});
+    }
+  }else if(p.type==='signal'){
+    const legend=p.series.map((s,k)=>chip(s.label,k)).join('');
+    const s0=p.series[0]||{};
+    const win=(s0.total&&s0.total>s0.n)?' · first '+s0.n+' of '+s0.total:'';
+    fig.innerHTML='<figcaption>signal'+site+esc(win)+'</figcaption><canvas id="'+id+'"></canvas><div class="legend">'+legend+'</div>';
+    box.appendChild(fig);
+    signalInto(document.getElementById(id), p.series);
+  }else{
+    fig.innerHTML='<figcaption>trajectory'+site+' · '+esc(p.label)+'</figcaption><canvas id="'+id+'"></canvas>'+
+      '<div class="tctl"><button class="play" id="pb'+id+'">\u25B6</button>'+
+      '<input type="range" min="0" max="1000" value="0" id="sl'+id+'">'+
+      '<span class="tlab" id="tl'+id+'">t = 0.00</span></div>';
+    box.appendChild(fig);
+    const cv=document.getElementById(id);
+    // 3-D trajectories: project the frames once at the default view
+    if(p.frames.length&&p.frames[0].length&&p.frames[0][0].length>2)
+      p.frames=p.frames.map(F=>F.map(q=>proj3(q,AZ0,EL0)));
+    const st={t:0,timer:null};
+    const draw=tf=>{const tl=document.getElementById('tl'+id),sl=document.getElementById('sl'+id);
+      if(!tl||!sl){if(st.timer){clearInterval(st.timer);st.timer=null;}return;}
+      trajInto(cv,p.frames,tf);
+      tl.textContent='t = '+tf.toFixed(2);sl.value=Math.round(tf*1000);};
+    const stop=()=>{if(st.timer){clearInterval(st.timer);st.timer=null;}
+      const b=document.getElementById('pb'+id);if(b)b.textContent='\u25B6';};
+    liveTrajStops.push(stop);
+    const start=()=>{if(st.timer){stop();return;}
+      if(st.t>=1)st.t=0;
+      document.getElementById('pb'+id).textContent='\u23F8';
+      st.timer=setInterval(()=>{st.t=Math.min(1,st.t+0.033/6);draw(st.t);
+        if(st.t>=1)stop();},33);};
+    document.getElementById('pb'+id).addEventListener('click',start);
+    document.getElementById('sl'+id).addEventListener('input',e=>{stop();st.t=e.target.value/1000;draw(st.t);});
+    draw(0);start();
+  }
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+// loop-composed provenance strings get long (canon-capped at 512 in the
+// interpreter); keep chips one line — head + tail (the tail carries the
+// identity hash and block index), full string on hover.
+function chip(s,k){const t=s.length>64?s.slice(0,30)+'…'+s.slice(-24):s;
+  return '<span class="chip" title="'+esc(s)+'"><i class="dot s'+(k%3)+'"></i>'+esc(t)+'</span>';}
+
+// live loss curves: one series per training statement, keyed by source
+// site (line + iteration stack). Straight-line programs make attribution
+// exact; bounded `for` (spec 10.1) will only deepen the key — the events
+// carry iter:[] from day one, so the grouping code is already general.
+let lossSeries=new Map();
+function addLoss(ev){
+  const key=ev.line+'|'+(ev.iter||[]).join('.');
+  let s=lossSeries.get(key);
+  if(!s){
+    const it=(ev.iter&&ev.iter.length)?' · k='+ev.iter.join('.'):'';
+    s={label:'line '+ev.line+it,line:ev.line,pts:[]};
+    lossSeries.set(key,s);
+    document.getElementById('losslegend').innerHTML=
+      [...lossSeries.values()].map((t,k)=>'<span class="chip" data-line="'+t.line+'" title="click to highlight line '+t.line+'"><i class="dot s'+(k%3)+'"></i>'+esc(t.label)+'</span>').join('');
+  }
+  s.pts.push(ev.value);
+  drawLoss();}
+function drawLoss(){
+  const cv=document.getElementById('losscv');const [g,w,h]=setup(cv);grid(g,w,h);
+  const all=[...lossSeries.values()];
+  let ymin=Infinity,ymax=-Infinity;
+  for(const s of all)for(const v of s.pts){if(v<ymin)ymin=v;if(v>ymax)ymax=v;}
+  all.forEach((s,k)=>{               // shared y-range: curves are comparable
+    if(s.pts.length<2)return;
+    g.strokeStyle=css(SER[k%3])||'#888';g.lineWidth=1.6;g.beginPath();
+    s.pts.forEach((v,i)=>{
+      const x=i/(s.pts.length-1)*w, y=h-4-(v-ymin)/(ymax-ymin+1e-9)*(h-10);
+      i?g.lineTo(x,y):g.moveTo(x,y);});
+    g.stroke();});}
+
+// line stripes: a tinted bar over one source line, scrolling with the code.
+// Red marks the line a structured error event points at; the accent one
+// answers "which line made this?" when a plot card or loss chip is clicked.
+let errStripe=null,focusStripe=null;
+function lineStripe(n,cls){
+  const cs=getComputedStyle(edEl), lh=parseFloat(cs.lineHeight);
+  const el=document.createElement('div');
+  el.className=cls;
+  el.style.top=(parseFloat(cs.paddingTop)+(n-1)*lh)+'px';
+  el.style.height=lh+'px';
+  edEl.appendChild(el);
+  const y=(n-1)*lh;                  // bring the line into view
+  if(y<edEl.scrollTop||y>edEl.scrollTop+edEl.clientHeight-lh)
+    edEl.scrollTop=Math.max(0,y-edEl.clientHeight/2);
+  return el;}
+function clearErrLine(){
+  if(errStripe){errStripe.remove();errStripe=null;}
+  if(focusStripe){focusStripe.remove();focusStripe=null;}}
+function markErrLine(n){clearErrLine();if(n>=1)errStripe=lineStripe(n,'errstripe');}
+function focusLine(n){
+  if(focusStripe){focusStripe.remove();focusStripe=null;}
+  if(n>=1)focusStripe=lineStripe(n,'focusstripe');}
+
+document.getElementById('losslegend').addEventListener('click',e=>{
+  const c=e.target.closest('[data-line]');
+  if(c)focusLine(+c.dataset.line);});
+
+const conEl=document.getElementById('con'), statusEl=document.getElementById('status');
+const conPre=document.getElementById('conPre');
+let conLines=0, conHasErr=false;
+function conLine(text){
+  const s=document.createElement('span');
+  if(text.startsWith('\u2717')){s.className='err';conHasErr=true;}
+  s.textContent=text+"\n";conEl.appendChild(s);
+  conLines++;
+  conPre.scrollTop=conPre.scrollHeight;}
+
+// status row: idle ("not run yet") -> running (moving wave emoji) -> done
+// ("show interpreter output", tinted red if a \u2717 line was seen). The box
+// itself stays hidden until opened; only this one-line status ever shows.
+const conWaveEl=document.getElementById('conWave'), conMsgEl=document.getElementById('conMsg');
+const conExpandBtn=document.getElementById('conExpand');
+function setConState(state){
+  if(state==='running'){
+    conWaveEl.hidden=false;conMsgEl.hidden=false;conMsgEl.textContent='running\u2026';conExpandBtn.hidden=true;
+  }else if(state==='done'){
+    conWaveEl.hidden=true;conMsgEl.hidden=true;conExpandBtn.hidden=false;
+    conExpandBtn.classList.toggle('haserr',conHasErr);
+    conExpandBtn.textContent='show interpreter output'+(conLines?' \u00b7 '+conLines+(conLines===1?' line':' lines'):'');
+  }else{
+    conWaveEl.hidden=true;conMsgEl.hidden=false;conMsgEl.textContent='not run yet';conExpandBtn.hidden=true;
+  }
+}
+
+// interpreter output: compact strip inline, full log in a <dialog> \u2014 the
+// same <pre> node is relocated between the two slots, so streaming updates
+// never need to touch more than one DOM tree.
+const conModal=document.getElementById('conModal');
+const conSlotCompact=document.getElementById('conSlotCompact'), conSlotFull=document.getElementById('conSlotFull');
+document.getElementById('conExpand').addEventListener('click',()=>{
+  conSlotFull.appendChild(conPre);conModal.showModal();conPre.scrollTop=conPre.scrollHeight;});
+document.getElementById('conClose').addEventListener('click',()=>conModal.close());
+conModal.addEventListener('close',()=>{conSlotCompact.appendChild(conPre);conPre.scrollTop=conPre.scrollHeight;});
+conModal.addEventListener('click',e=>{if(e.target===conModal)conModal.close();});
+
+// syntax highlighting: identifiers directly followed by "=" (no space) are
+// named-argument keys (steps=, kernel=, from=, ...) and read as keywords
+// like the closed clause-word set, so new v0.4+ parameter names need no
+// changes here. The editor is the highlighted <pre> itself (contenteditable):
+// re-highlighting preserves the caret by text offset, IME composition defers
+// it, and a small history stack replaces the native undo that innerHTML
+// rewrites would otherwise defeat.
+const KEYWORDS=new Set(['seed','plot','trajectory','of','via','for','from','to','using','with','record','in','or']);
+function highlight(src){
+  const re=/(\/\/[^\n]*)|(\b\d+\.?\d*(?:[eE][+-]?\d+)?\b)|([A-Za-z_][A-Za-z0-9_]*)/g;
+  let out='',last=0,m;
+  while((m=re.exec(src))){
+    out+=esc(src.slice(last,m.index));last=re.lastIndex;
+    const [,cm,num,id]=m;
+    if(cm){out+='<span class="cm">'+esc(cm)+'</span>';continue;}
+    if(num){out+='<span class="nm">'+esc(num)+'</span>';continue;}
+    const isArgKey=src[last]==='='&&src[last+1]!=='=';
+    out+=(KEYWORDS.has(id)||isArgKey)?'<span class="kw">'+esc(id)+'</span>':esc(id);
+  }
+  out+=esc(src.slice(last));
+  return out;}
+const edEl=document.getElementById('ed');
+// plaintext-only (Chromium/Safari/recent Firefox) keeps typing and paste
+// plain; on browsers without it, fall back to rich contenteditable guarded
+// by the paste and keydown handlers below
+if(edEl.contentEditable!=='plaintext-only'){try{edEl.contentEditable='plaintext-only';}catch(e){edEl.contentEditable='true';}}
+function edGetValue(){return edEl.textContent;}
+function selOffsets(){        // [start, end] of the selection as text offsets
+  const sel=getSelection();
+  if(!sel.rangeCount||!edEl.contains(sel.anchorNode))return null;
+  const r=sel.getRangeAt(0);
+  const pre=document.createRange();pre.selectNodeContents(edEl);
+  pre.setEnd(r.startContainer,r.startOffset);
+  const a=pre.toString().length;
+  return [a,a+r.toString().length];
+}
+function setCaret(off){
+  const sel=getSelection(),r=document.createRange();
+  let acc=0,placed=false;
+  const walker=document.createTreeWalker(edEl,NodeFilter.SHOW_TEXT);
+  for(let n;(n=walker.nextNode());){
+    const len=n.textContent.length;
+    if(off<=acc+len){r.setStart(n,off-acc);placed=true;break;}
+    acc+=len;
+  }
+  if(!placed){r.selectNodeContents(edEl);}
+  r.collapse(placed?true:false);
+  sel.removeAllRanges();sel.addRange(r);
+}
+// the trailing <br> gives the final newline a line box to park the caret on;
+// textContent ignores it, so the value is untouched. The gutter shows one
+// number per logical line — exact, because the editor never soft-wraps.
+const gutEl=document.getElementById('gutter');
+function render(v){
+  edEl.innerHTML=highlight(v)+'<br>';
+  const n=v.split('\n').length;
+  if(gutEl.dataset.n!=n){
+    gutEl.dataset.n=n;
+    let s='';for(let i=1;i<=n;i++)s+=(i>1?'\n':'')+i;
+    gutEl.textContent=s;
+  }
+  gutEl.scrollTop=edEl.scrollTop;
+}
+edEl.addEventListener('scroll',()=>{gutEl.scrollTop=edEl.scrollTop;});
+function rehighlight(){
+  const s=selOffsets();
+  render(edGetValue());
+  if(s)setCaret(s[0]);
+}
+let hist=[],histAt=-1;
+function pushHist(){
+  const v=edGetValue(),s=selOffsets();
+  if(histAt>=0&&hist[histAt].v===v)return;
+  hist=hist.slice(0,histAt+1);hist.push({v,c:s?s[0]:v.length});
+  if(hist.length>300)hist.shift();
+  histAt=hist.length-1;
+}
+function applyHist(h){render(h.v);setCaret(h.c);clearErrLine();}
+function edSetValue(v){render(v);hist=[{v,c:0}];histAt=0;clearErrLine();}
+function insertText(s){
+  const r=selOffsets();if(!r)return;
+  const v=edGetValue();
+  render(v.slice(0,r[0])+s+v.slice(r[1]));
+  setCaret(r[0]+s.length);
+  clearErrLine();pushHist();
+}
+let composing=false;
+edEl.addEventListener('compositionstart',()=>composing=true);
+edEl.addEventListener('compositionend',()=>{composing=false;rehighlight();clearErrLine();pushHist();});
+edEl.addEventListener('input',()=>{if(composing)return;rehighlight();clearErrLine();pushHist();});
+edEl.addEventListener('paste',e=>{e.preventDefault();insertText(e.clipboardData.getData('text/plain'));});
+edEl.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;
+  if(e.key==='Enter'&&!mod){e.preventDefault();insertText('\n');return;}
+  if(mod&&!e.shiftKey&&k==='z'){e.preventDefault();if(histAt>0)applyHist(hist[--histAt]);return;}
+  if(mod&&(k==='y'||(e.shiftKey&&k==='z'))){e.preventDefault();if(histAt<hist.length-1)applyHist(hist[++histAt]);return;}
+  if(mod&&(k==='b'||k==='i'||k==='u'))e.preventDefault();   // rich-format guard for the fallback mode
+});
+
+async function run(){
+  const btn=document.getElementById('run');btn.disabled=true;
+  liveTrajStops.forEach(f=>f());liveTrajStops=[];
+  conEl.textContent='';conLines=0;conHasErr=false;setConState('running');
+  document.getElementById('plots').innerHTML='';plotN=0;
+  lossSeries=new Map();document.getElementById('losslegend').innerHTML='';
+  clearErrLine();drawLoss();statusEl.textContent='running…';
+  const t0=performance.now();
+  try{
+    const resp=await fetch('/run',{method:'POST',body:edGetValue()});
+    const reader=resp.body.getReader();const dec=new TextDecoder();let buf='';let gotDone=false;
+    for(;;){
+      const {value,done}=await reader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let i;
+      while((i=buf.indexOf('\n'))>=0){
+        const row=buf.slice(0,i);buf=buf.slice(i+1);
+        if(!row.trim())continue;
+        const ev=JSON.parse(row);
+        if(ev.type==='line'){conLine(ev.text);}
+        else if(ev.type==='loss'){addLoss(ev);}
+        else if(ev.type==='error'){markErrLine(ev.line);}
+        else if(ev.type==='plot'){addPlot(ev.plot);}
+        else if(ev.type==='done'){gotDone=true;
+          statusEl.textContent=(ev.code===0?'done':'failed')+' · '+((performance.now()-t0)/1000).toFixed(1)+'s';}
+      }
+    }
+    if(!gotDone){conLine('\u2717 the stream ended without completing — check the server terminal for errors');
+      statusEl.textContent='error';}
+  }catch(e){conLine('\u2717 connection error: '+e.message);statusEl.textContent='error';}
+  setConState('done');
+  btn.disabled=false;}
+
+document.getElementById('run').addEventListener('click',run);
+
+// example gallery: the source of truth is examples/*.liu, served
+// by /examples (name + first comment line as the description). The inline
+// EXAMPLES above remain only as the file:// / static-demo fallback. Files
+// not listed in EXAMPLE_META land in "More" so new examples are never lost.
+const EXAMPLE_META={
+  'hello.liu':            ['Hello, Liu','Start here'],
+  'path_fm.liu':          ['Flow matching','Probability paths (declared)'],
+  'path_diffusion.liu':   ['Diffusion — one line away from FM','Probability paths (declared)'],
+  'flow_matching.liu':    ['transport sugar (legacy form)','Probability paths (declared)'],
+  'diffusion.liu':        ['reverse + denoiser (implicit path)','Probability paths (declared)'],
+  'svgd.liu':             ['SVGD — intent & mechanism','Gradient flow (descent)'],
+  'svgd_bayes.liu':       ['Bayesian banana & double well','Gradient flow (descent)'],
+  'svgd_normalized.liu':  ['One divergence, two geometries (stein vs w2)','Gradient flow (descent)'],
+  'svgd_data.liu':        ['mmd(data) — the MMD flow','Gradient flow (descent)'],
+  'w2_descent.liu':       ['w2(data) — Sinkhorn displacement descent','Gradient flow (descent)'],
+  'sica.liu':             ['SICA — unmix by decoupling (KL flows)','Gradient flow (descent)'],
+  'sica_rotation.liu':    ['ICA on the rotation manifold (family=rotation)','Gradient flow (descent)'],
+  'signals.liu':          ['plot_signal — the waveform view','Probability paths (declared)'],
+  'sica_signals.liu':     ['Blind source separation on a time series','Gradient flow (descent)'],
+  'sica_process.liu':     ['Process independence — the Gaussian AR wall','Gradient flow (descent)'],
+  'sica_rf.liu':          ['SICA by transport (rectified-flow engine)','Probability paths (declared)'],
+  'sica_rf_rotation.liu': ['Constrained transport — regress(rotation)','Probability paths (declared)'],
+  'sica_rf_process.liu':  ['Process transport — the 2×2 completed','Probability paths (declared)'],
+  'drifting.liu':         ['Drifting model (one-step generator)','Gradient flow (descent)'],
+  'ot_cfm.liu':           ['OT-CFM — coupled endpoints, straight paths','Probability paths (declared)'],
+  'schrodinger_bridge.liu':['Schrödinger bridge as a formula','Probability paths (declared)'],
+  'reflow.liu':           ['Reflow — bounded for + paired coupling','Probability paths (declared)'],
+  'couple_marginals.liu': ['prob() as Law — couplings keep marginals','Probability paths (declared)'],
+  'cond_transfer.liu':    ['Conditional transport (kernels & given)','Probability paths (declared)'],
+  'sbi_npse.liu':         ['Simulation-based inference (amortized posterior)','Probability paths (declared)'],
+  'sbi_svgd.liu':         ['SBI by conditional descent (posterior slice)','Gradient flow (descent)'],
+  'sbi_kernel.liu':       ['User-defined simulator (programmable kernel)','Gradient flow (descent)'],
+  'sbi_nobs.liu':         ['N observations, one posterior (KL decomposition)','Gradient flow (descent)'],
+  'cond_family.liu':      ['Conditional-family transport (spread pins)','Gradient flow (descent)'],
+  'cond_family_dsm.liu':  ['Family transport with neural scores (dsm)','Gradient flow (descent)'],
+  'sica_cond.liu':        ['SICA Alg. 1, closed form (per-element conditioning)','Flow matching (declared paths)'],
+  'sica_cond_net.liu':    ['SICA Alg. 1, neural field, rotation-projected','Flow matching (declared paths)'],
+  'sica_alg1.liu':        ['SICA Alg. 1 unrestricted: identity & the filter wander','Flow matching (declared paths)'],
+  'sica_instant.liu':     ['SICA instantaneous demixer: project=instant (Level 0)','Flow matching (declared paths)'],
+  'sica_nl.liu':          ['SICA nonlinear mixing: rotation then instant, gate & wall','Flow matching (declared paths)'],
+  'sica_amort.liu':       ['SICA amortized demixer: one net via into= (Level 1)','Flow matching (declared paths)'],
+  'manifold_local.liu':   ['Local manifold identification (OT flow + kernel)','Gradient flow (descent)'],
+  'manifold_corollary.liu': ['Corollary 1: pullback beats the tangent line','Gradient flow (descent)'],
+  'manifold_torus.liu':   ['A 2-D manifold in 3-D: torus + rotatable plot','Flow matching (declared paths)'],
+  'kernel_probes.liu':    ['Draw-level identities (self-verifying probes)','Gradient flow (descent)'],
+  'svgd_inverse.liu':     ['SVGD inversion (record=true)','Gradient flow (descent)'],
+  'unnorm_pipeline.liu':  ['Unnormalized target pipeline','Gradient flow (descent)'],
+  'guidance_cfg.liu':     ['CFG — two independent nets','Guidance (field algebra)'],
+  'guidance_residual.liu':['Residual guidance (base=)','Guidance (field algebra)'],
+  'err_repeated_dist.liu':['No draw identity','Errors are lessons'],
+  'err_no_score.liu':     ['No score','Errors are lessons'],
+  'err_unnorm_sample.liu':['No exact sampler','Errors are lessons'],
+  'err_provenance.liu':   ['Provenance mismatch','Errors are lessons'],
+  'err_inv_wgflow.liu':   ['inv without history','Errors are lessons'],
+  'err_field_algebra.liu':['Field algebra vs descent','Errors are lessons'],
+  'err_residual_base.liu':['Residual over a foreign base','Errors are lessons'],
+};
+const GROUP_ORDER=['Start here','Gradient flow (descent)','Probability paths (declared)','Guidance (field algebra)','Errors are lessons','More'];
+const exModal=document.getElementById('exModal');
+let exItems=[];
+function setExample(it){
+  edSetValue(it.code);
+  document.getElementById('exbtn').textContent=it.name+' ▾';
+  if(exModal.open)exModal.close();
+}
+function buildGallery(){
+  const box=document.getElementById('exGroups');box.innerHTML='';
+  const metaOrder=Object.keys(EXAMPLE_META);
+  for(const g of GROUP_ORDER){
+    const items=exItems.filter(i=>i.group===g)
+      .sort((a,b)=>metaOrder.indexOf(a.file)-metaOrder.indexOf(b.file));
+    if(!items.length)continue;
+    const sec=document.createElement('section');sec.className='exgroup';
+    const h=document.createElement('h3');h.textContent=g;sec.appendChild(h);
+    for(const it of items){
+      const row=document.createElement('div');row.className='exitem';
+      row.innerHTML='<span class="nm2">'+esc(it.name)+'</span><span class="ds">'+esc(it.desc)+'</span>';
+      row.addEventListener('click',()=>setExample(it));
+      sec.appendChild(row);
+    }
+    box.appendChild(sec);
+  }
+}
+async function loadExamples(){
+  try{
+    const r=await fetch('/examples');
+    if(!r.ok)throw new Error(r.status);
+    exItems=(await r.json()).map(f=>{
+      const m=EXAMPLE_META[f.file]||[f.file.replace(/\.liu$/,''),'More'];
+      return {file:f.file,name:m[0],group:m[1],desc:f.desc,code:f.code};
+    });
+  }catch(e){
+    exItems=Object.entries(EXAMPLES).map(([k,v])=>({file:'',name:k,group:'More',desc:'',code:v}));
+  }
+  buildGallery();
+  setExample(exItems.find(i=>i.file==='hello.liu')||exItems[0]);  // start here
+}
+document.getElementById('exbtn').addEventListener('click',()=>exModal.showModal());
+document.getElementById('exClose').addEventListener('click',()=>exModal.close());
+exModal.addEventListener('click',e=>{if(e.target===exModal)exModal.close();});
+loadExamples();
+document.getElementById('ed').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))run();});
+</script>
