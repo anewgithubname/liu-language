@@ -35,19 +35,16 @@ flow( field( path ) ) # μ
 | Path | What |
 |---|---|
 | `interpreter/liu.cpp` | single-file reference interpreter (C++20, CPU BLAS) |
-| `examples/` | runnable examples: FM, diffusion, SVGD, inversion, Bayes, and the teaching errors |
-| `web/` | zero-dependency playground server + static demo + poster sources |
-| `editors/vscode` | VS Code extension: highlighting + run button + error squiggles (symlink install, see its README) |
-| `bench/` | CPU benchmarks vs a parameter-matched PyTorch mirror (results + where the differences come from) |
+| `examples/` | runnable examples: hello, FM, diffusion, SVGD, SBI, SICA |
 | `docs/liu-reference.md` | language reference (English) |
 | `docs/liu-api.md` | complete function & operator reference (signatures, defaults, limits) |
-| `docs/liu-cheatsheet.md` / `.pdf` / `.pptx` | 3-minute cheat sheet and the A4 poster |
-| `docs/roadmap.md` | implementation status vs roadmap: what lands in v0.4 / v0.5 (Chinese) |
+| `docs/liu-cheatsheet.md` / `.pdf` | 3-minute cheat sheet |
+| `docs/sbi-cookbook.md` | simulation-based inference cookbook (Chinese) |
 | `docs/liu-spec.md` | design history and roadmap (Chinese) |
-| `external/juzhen` | the [Juzhen](https://github.com/anewgithubname/Juzhen) C++ matrix backend, **pinned submodule** |
+| `external/juzhen` | the [Juzhen](https://github.com/anewgithubname/Juzhen) C++ matrix backend, **vendored & pinned** |
 
-The pinned submodule commit is part of the reproducibility statement:
-*program text + seed + backend commit → bit-identical output.* The
+The pinned backend version is part of the reproducibility statement:
+*program text + seed + backend version → bit-identical output.* The
 interpreter pins BLAS to a single thread for the same reason — the
 contract must not depend on the host's core count (multithreaded BLAS
 changes reduction order; set `OPENBLAS_NUM_THREADS` explicitly to opt
@@ -57,8 +54,8 @@ out, trading the contract for parallelism).
 
 ```bash
 sudo apt install g++ libopenblas-dev liblapack-dev   # Linux (macOS: brew install openblas)
-./interpreter/build.sh          # auto-inits the submodule; produces build_liu/liu
-./build_liu/liu examples/path_fm.liu
+./interpreter/build.sh          # produces build_liu/liu
+./build_liu/liu examples/flow_matching.liu
 ./build_liu/liu --export-pytorch examples/hello.liu > hello_torch.py
                                 # scale-out escape hatch: a runnable PyTorch
                                 # mirror (regress-FM/diffusion incl. inv,
@@ -67,16 +64,3 @@ sudo apt install g++ libopenblas-dev liblapack-dev   # Linux (macOS: brew instal
                                 # NOT bit-identical — the reproducibility
                                 # contract stays on the Liu side)
 ```
-
-## Playground
-
-```bash
-python3 web/server.py --port 8080    # Python stdlib only
-# open http://localhost:8080 — edit, Run, live per-statement loss curves,
-# streaming plots, errors highlighted on their source line
-```
-
-The language itself is the sandbox (no I/O primitives, not Turing
-complete); the server adds process-level guards (wall-clock timeout,
-memory limit, program-size limit, concurrency cap) and whole-run
-caching, which determinism makes sound.
